@@ -118,11 +118,61 @@ st.dataframe(resultados)
 
 st.header("Gráfica RT vs Frecuencia")
 
-fig, ax = plt.subplots()
+plt.style.use("dark_background")
 
-ax.plot(frecuencias,RT_sabine,"o-",label="Sabine")
-ax.plot(frecuencias,RT_eyring,"o-",label="Eyring")
-ax.plot(frecuencias,RT_millington,"o-",label="Millington")
+fig, ax = plt.subplots(figsize=(8,4))
+
+# Colores más sobrios
+color_sabine = "#4C78A8"
+color_eyring = "#F58518"
+color_millington = "#54A24B"
+
+ax.plot(
+    frecuencias,
+    RT_sabine,
+    marker="o",
+    linewidth=2,
+    markersize=6,
+    color=color_sabine,
+    label="Sabine"
+)
+
+ax.plot(
+    frecuencias,
+    RT_eyring,
+    marker="o",
+    linewidth=2,
+    markersize=6,
+    color=color_eyring,
+    label="Eyring"
+)
+
+ax.plot(
+    frecuencias,
+    RT_millington,
+    marker="o",
+    linewidth=2,
+    markersize=6,
+    color=color_millington,
+    label="Millington"
+)
+
+ax.set_xlabel("Frecuencia (Hz)", fontsize=11)
+ax.set_ylabel("RT (s)", fontsize=11)
+
+ax.set_title("Tiempo de Reverberación vs Frecuencia", fontsize=13)
+
+# grid tenue
+ax.grid(True, linestyle="--", alpha=0.25)
+
+# fondo
+ax.set_facecolor("#0E1117")
+fig.patch.set_facecolor("#0E1117")
+
+# leyenda limpia
+ax.legend(frameon=False)
+
+st.pyplot(fig)
 
 ax.set_xlabel("Frecuencia (Hz)")
 ax.set_ylabel("Tiempo de reverberación (s)")
