@@ -1,99 +1,133 @@
 import streamlit as st
+import pandas as pd
+import numpy as np
 import math
+import matplotlib.pyplot as plt
+
+st.set_page_config(page_title="Acústica de Salas", layout="wide")
 
 st.title("Modelación del Campo Sonoro en Recintos")
 
+# =========================
+# Dimensiones de la sala
+# =========================
 st.sidebar.header("Dimensiones de la sala")
 
-largo = st.sidebar.number_input("Largo (m)",6.0)
-ancho = st.sidebar.number_input("Ancho (m)",4.0)
-alto = st.sidebar.number_input("Altura (m)",2.5)
+largo = st.sidebar.number_input("Largo (m)", 6.0)
+ancho = st.sidebar.number_input("Ancho (m)", 4.0)
+alto = st.sidebar.number_input("Altura (m)", 2.5)
 
 V = largo * ancho * alto
+S_total = 2*(largo*ancho + largo*alto + ancho*alto)
 
-st.sidebar.header("Propiedades acústicas")
+st.sidebar.write("Volumen:", round(V,2), "m³")
+st.sidebar.write("Superficie total:", round(S_total,2), "m²")
 
-S = st.sidebar.number_input("Superficie total S (m²)",160.0)
-A = st.sidebar.number_input("Área de absorción A (sabines)",20.0)
+# =========================
+# Materiales
+# =========================
 
-alpha = A/S if S>0 else 0
+st.header("Materiales del recinto")
 
-st.sidebar.header("Datos de la fuente")
+frecuencias = [125,250,500,1000,2000,4000]
 
-W = st.sidebar.number_input("Potencia acústica W (W)",0.001)
-r = st.sidebar.number_input("Distancia a la fuente r (m)",5.0)
-Q = st.sidebar.number_input("Factor de directividad Q",2.0)
-Lw = st.sidebar.number_input("Nivel de potencia Lw (dB)",90.0)
+data = {
+    "Material":["Piso","Techo","Paredes","Ventanas","Sillas","Puerta"],
+    "Tipo":["Concreto / baldosa","Drywall","Ladrillo","Vidrio","Butaca tapizada","Madera"],
+    "Area (m2)":[20.45,0,0,0,0,0],
+    "125":[0.01,0.05,0.01,0.28,0.15,0.15],
+    "250":[0.01,0.05,0.01,0.22,0.4,0.11],
+    "500":[0.02,0.05,0.02,0.15,0.7,0.1],
+    "1000":[0.02,0.04,0.02,0.12,0.85,0.07],
+    "2000":[0.02,0.04,0.02,0.08,0.9,0.05],
+    "4000":[0.02,0.04,0.02,0.06,0.9,0.05]
+}
+
+df = pd.DataFrame(data)
+
+df_edit = st.data_editor(df, num_rows="dynamic")
+
+# =========================
+# Absorción total A(f)
+# =========================
+
+A_freq = {}
+
+for f in frecuencias:
+    A = np.sum(df_edit["Area (m2)"] * df_edit[str(f)])
+    A_freq[f] = A
+
+st.write("### Área de absorción equivalente")
+
+for f in frecuencias:
+    st.write(f"A({f} Hz) = {round(A_freq[f],3)} sabines")
+
+# =========================
+# RT por banda
+# =========================
 
 c = 343
-I0 = 1e-12
 
-# ===============================
-# CALCULOS ACUSTICOS
-# ===============================
+RT_sabine = []
+RT_eyring = []
+RT_millington = []
 
-RT_sabine = 0.161 * V / A if A>0 else 0
+for f in frecuencias:
 
-RT_eyring = 0.161 * V / (-S * math.log(1-alpha)) if alpha<1 else 0
+    A = A_freq[f]
+    alpha_m = A / S_total if S_total>0 else 0
 
-l = 4 * V / S if S>0 else 0
+    # Sabine
+    RTs = 0.161 * V / A if A>0 else 0
+    RT_sabine.append(RTs)
 
-n = (c * RT_sabine) / l if l>0 else 0
+    # Eyring
+    RTe = 0.161 * V / (-S_total * math.log(1-alpha_m)) if alpha_m<1 and alpha_m>0 else RTs
+    RT_eyring.append(RTe)
 
-tau = l / c if c>0 else 0
+    # Millington
+    suma = 0
+    for i,row in df_edit.iterrows():
+        area = row["Area (m2)"]
+        alpha = row[str(f)]
+        if alpha < 1:
+            suma += area * math.log(1-alpha)
 
-If = W / (4 * math.pi * r**2)
+    RTm = -0.161 * V / suma if suma!=0 else RTs
+    RT_millington.append(RTm)
 
-LI = 10 * math.log10(If / I0)
+# =========================
+# Tabla de resultados
+# =========================
 
-R = A / (1-alpha) if alpha<1 else 0
+st.header("Tiempo de reverberación")
 
-Ir = (4 * W) / R if R>0 else 0
+resultados = pd.DataFrame({
+    "Frecuencia (Hz)":frecuencias,
+    "RT Sabine (s)":RT_sabine,
+    "RT Eyring (s)":RT_eyring,
+    "RT Millington (s)":RT_millington
+})
 
-LIr = 10 * math.log10(Ir / I0) if Ir>0 else 0
+st.write("### Resultados de RT")
+st.dataframe(resultados)
 
-Lp = Lw + 10 * math.log10(Q/(4*math.pi*r**2) + 4/R) if R>0 else 0
+# =========================
+# Gráfica
+# =========================
 
-Dc = 0.057 * math.sqrt(Q * R) if R>0 else 0
+st.header("Gráfica RT vs Frecuencia")
 
-# ===============================
-# RESULTADOS
-# ===============================
+fig, ax = plt.subplots()
 
-st.header("Resultados")
+ax.plot(frecuencias,RT_sabine,"o-",label="Sabine")
+ax.plot(frecuencias,RT_eyring,"o-",label="Eyring")
+ax.plot(frecuencias,RT_millington,"o-",label="Millington")
 
-st.subheader("Parámetros de la sala")
+ax.set_xlabel("Frecuencia (Hz)")
+ax.set_ylabel("Tiempo de reverberación (s)")
+ax.set_title("RT vs Frecuencia")
 
-st.write("Volumen de la sala:", round(V,2),"m³")
-st.write("Superficie total:", S,"m²")
-st.write("Área de absorción:", A,"sabines")
+ax.legend()
 
-st.subheader("Tiempo de reverberación")
-
-st.write("RT Sabine:", round(RT_sabine,3),"s")
-st.write("RT Eyring:", round(RT_eyring,3),"s")
-
-st.subheader("Propagación del sonido")
-
-st.write("Recorrido libre medio:", round(l,3),"m")
-st.write("Número de reflexiones:", round(n,2))
-st.write("Tiempo entre reflexiones:", round(tau,5),"s")
-
-st.subheader("Campo directo")
-
-st.write("Intensidad de la fuente If:", If)
-st.write("Nivel de intensidad LI:", round(LI,2),"dB")
-
-st.subheader("Campo reverberado")
-
-st.write("Constante de sala R:", round(R,2))
-st.write("Intensidad reverberada Ir:", Ir)
-st.write("Nivel reverberado LIr:", round(LIr,2),"dB")
-
-st.subheader("Nivel total de presión sonora")
-
-st.write("Nivel de presión sonora Lp:", round(Lp,2),"dB")
-
-st.subheader("Distancia crítica")
-
-st.write("Distancia crítica Dc:", round(Dc,2),"m")
+st.pyplot(fig)
