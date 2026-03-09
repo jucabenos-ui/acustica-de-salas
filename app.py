@@ -80,6 +80,7 @@ data={
 }
 
 df=pd.DataFrame(data)
+
 df_edit=st.data_editor(df)
 
 # =========================
@@ -165,7 +166,7 @@ ax.legend()
 st.pyplot(fig)
 
 # =========================
-# Parámetros estadísticos
+# Parámetros del campo acústico
 # =========================
 
 st.header("Parámetros del campo acústico")
@@ -229,3 +230,17 @@ Dc=0.057*math.sqrt(Q*R)
 st.subheader("Distancia crítica")
 
 st.write("Dc =",round(Dc,2),"m")
+
+# =========================
+# Absorción del aire
+# =========================
+
+st.subheader("Absorción del aire")
+
+m = st.sidebar.number_input("Coeficiente absorción aire m (dB/m)",0.003)
+
+Lp0 = Lp
+
+Lp_r = Lp0 - 20*math.log10(r) - m*r
+
+st.write("Nivel con absorción del aire Lp(r) =",round(Lp_r,2),"dB")
