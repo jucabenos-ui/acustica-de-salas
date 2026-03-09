@@ -69,7 +69,7 @@ data={
 "Madera"
 ],
 
-"Area (m2)":[29.37,0,0,0,0,0,0,0],
+"Area (m2)":[26.9518,20.5748,8.799,51.246,11.166,4,2.422,3.18],
 
 "125":[0.01,0.01,0.05,0.01,0.05,0.28,0.10,0.15],
 "250":[0.01,0.01,0.05,0.01,0.05,0.22,0.10,0.11],
@@ -90,7 +90,12 @@ df_edit=st.data_editor(df)
 A_freq={}
 
 for f in frecuencias:
+
     A=np.sum(df_edit["Area (m2)"]*df_edit[str(f)])
+
+    if A<=0:
+        A=1e-6
+
     A_freq[f]=A
 
 st.subheader("Área de absorción equivalente")
@@ -109,24 +114,36 @@ RT_m=[]
 for f in frecuencias:
 
     A=A_freq[f]
-    alpha=A/S if S>0 else 0
 
-    RTs=0.161*V/A if A>0 else 0
+    alpha=A/S
+
+    alpha=min(alpha,0.999)
+
+    # Sabine
+    RTs=0.161*V/A
     RT_s.append(RTs)
 
-    RTe=0.161*V/(-S*math.log(1-alpha)) if alpha<1 and alpha>0 else RTs
+    # Eyring
+    RTe=0.161*V/(-S*math.log(1-alpha))
     RT_e.append(RTe)
 
+    # Millington
     suma=0
 
     for i,row in df_edit.iterrows():
+
         area=row["Area (m2)"]
         a=row[str(f)]
 
-        if a<1:
-            suma+=area*math.log(1-a)
+        a=min(a,0.999)
 
-    RTm=-0.161*V/suma if suma!=0 else RTs
+        suma+=area*math.log(1-a)
+
+    if suma==0:
+        RTm=RTs
+    else:
+        RTm=-0.161*V/suma
+
     RT_m.append(RTm)
 
 # =========================
