@@ -1,22 +1,31 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import math
 import matplotlib.pyplot as plt
+import math
 
 st.set_page_config(page_title="Acústica de Salas", layout="wide")
 
-st.title("Modelación del Campo Sonoro en Recintos")
+st.title("Modelación Acústica de un Recinto")
 
-# ==================================================
-# DIMENSIONES DE LA SALA
-# ==================================================
+# =========================================================
+# CONSTANTES
+# =========================================================
+
+c = 343
+I0 = 1e-12
+
+frecuencias = np.array([125,250,500,1000,2000,4000])
+
+# =========================================================
+# DIMENSIONES DEL RECINTO
+# =========================================================
 
 st.sidebar.header("Dimensiones de la sala")
 
-L = st.sidebar.number_input("Largo (m)",6.0)
-W = st.sidebar.number_input("Ancho (m)",4.0)
-H = st.sidebar.number_input("Altura (m)",2.5)
+L = st.sidebar.number_input("Largo (m)",6.47)
+W = st.sidebar.number_input("Ancho (m)",4.54)
+H = st.sidebar.number_input("Altura (m)",3.16)
 
 V = L*W*H
 S = 2*(L*W + L*H + W*H)
@@ -24,31 +33,26 @@ S = 2*(L*W + L*H + W*H)
 st.sidebar.write("Volumen:",round(V,2),"m³")
 st.sidebar.write("Superficie total:",round(S,2),"m²")
 
-# ==================================================
+# =========================================================
 # DATOS DE FUENTE
-# ==================================================
+# =========================================================
 
 st.sidebar.header("Fuente sonora")
 
-W_fuente = st.sidebar.number_input("Potencia W (W)",0.001)
-r = st.sidebar.number_input("Distancia r (m)",5.0)
-Q = st.sidebar.number_input("Directividad Q",2.0)
-Lw = st.sidebar.number_input("Nivel potencia Lw (dB)",90.0)
+W_fuente = st.sidebar.number_input("Potencia acústica (W)",0.001)
+r = st.sidebar.number_input("Distancia fuente-receptor (m)",5.0)
+Q = st.sidebar.number_input("Directividad",2.0)
+Lw = st.sidebar.number_input("Nivel potencia sonora (dB)",90.0)
 
-c = 343
-I0 = 1e-12
-
-# ==================================================
-# MATERIALES
-# ==================================================
+# =========================================================
+# TABLA DE MATERIALES
+# =========================================================
 
 st.header("Materiales del recinto")
 
-frecuencias=[125,250,500,1000,2000,4000]
-
 data={
 
-"Material":[
+"Elemento":[
 "Piso",
 "Techo",
 "Cielo raso",
@@ -59,18 +63,7 @@ data={
 "Puerta"
 ],
 
-"Tipo":[
-"Concreto / baldosa",
-"Concreto / baldosa",
-"Drywall",
-"Ladrillo",
-"Drywall",
-"Vidrio",
-"Madera",
-"Madera"
-],
-
-"Area (m2)":[26.9518,20.5748,8.799,51.246,11.166,4,2.422,3.18],
+"Area":[26.9518,20.5748,8.799,51.246,11.166,4,2.422,3.18],
 
 "125":[0.01,0.01,0.05,0.01,0.05,0.28,0.10,0.15],
 "250":[0.01,0.01,0.05,0.01,0.05,0.22,0.10,0.11],
@@ -81,167 +74,166 @@ data={
 
 }
 
-df=pd.DataFrame(data)
+df = pd.DataFrame(data)
 
-df_edit=st.data_editor(df)
+df_edit = st.data_editor(df)
 
-# ==================================================
+# =========================================================
 # ABSORCIÓN EQUIVALENTE
-# ==================================================
+# =========================================================
 
-A_freq={}
+A = []
 
 for f in frecuencias:
 
-    A=np.sum(df_edit["Area (m2)"]*df_edit[str(f)])
+    absorcion = np.sum(df_edit["Area"] * df_edit[str(f)])
 
-    if A<=0:
-        A=1e-6
+    if absorcion <= 0:
+        absorcion = 1e-6
 
-    A_freq[f]=A
+    A.append(absorcion)
+
+A = np.array(A)
 
 st.subheader("Área de absorción equivalente")
 
-for f in frecuencias:
-    st.write(f"A({f} Hz) =",round(A_freq[f],3),"sabines")
+for i,f in enumerate(frecuencias):
+    st.write(f"A({f} Hz) = {round(A[i],3)} sabines")
 
-# ==================================================
+# =========================================================
+# COEFICIENTE PROMEDIO
+# =========================================================
+
+alpha_prom = A/S
+alpha_prom = np.clip(alpha_prom,1e-6,0.999)
+
+# =========================================================
 # TIEMPOS DE REVERBERACIÓN
-# ==================================================
+# =========================================================
 
-RT_s=[]
-RT_e=[]
-RT_m=[]
+RT_sabine = 0.161*V/A
+
+RT_eyring = 0.161*V/(-S*np.log(1-alpha_prom))
+
+RT_millington = []
 
 for f in frecuencias:
 
-    A=A_freq[f]
-
-    alpha=A/S
-    alpha=np.clip(alpha,1e-6,0.999)
-
-    # SABINE
-    RTs=0.161*V/A
-    RT_s.append(RTs)
-
-    # EYRING
-    RTe=0.161*V/(-S*np.log(1-alpha))
-    RT_e.append(RTe)
-
-    # MILLINGTON (CORREGIDO)
-    suma=0
+    suma = 0
 
     for i,row in df_edit.iterrows():
 
-        area=row["Area (m2)"]
-        a=row[str(f)]
+        area = row["Area"]
+        alpha = row[str(f)]
 
-        a=np.clip(a,1e-6,0.999)
+        alpha = np.clip(alpha,1e-6,0.999)
 
-        suma+= -area*np.log(1-a)
+        suma += -area*np.log(1-alpha)
 
-    RTm=0.161*V/suma
-    RT_m.append(RTm)
+    RT_millington.append(0.161*V/suma)
 
-# ==================================================
-# TABLA
-# ==================================================
+RT_millington = np.array(RT_millington)
+
+# =========================================================
+# TABLA RESULTADOS
+# =========================================================
 
 st.header("Tiempo de reverberación")
 
-tabla=pd.DataFrame({
+tabla = pd.DataFrame({
+
 "Frecuencia":frecuencias,
-"RT Sabine":RT_s,
-"RT Eyring":RT_e,
-"RT Millington":RT_m
+"Sabine":RT_sabine,
+"Eyring":RT_eyring,
+"Millington":RT_millington
+
 })
 
 st.dataframe(tabla)
 
-# ==================================================
+# =========================================================
 # GRÁFICA
-# ==================================================
+# =========================================================
 
-st.header("Gráfica RT vs Frecuencia")
+st.subheader("RT vs Frecuencia")
 
 plt.style.use("dark_background")
 
-fig,ax=plt.subplots(figsize=(8,4))
+fig,ax = plt.subplots(figsize=(8,4))
 
-ax.plot(frecuencias,RT_s,"o-",label="Sabine",linewidth=2)
-ax.plot(frecuencias,RT_e,"o-",label="Eyring",linewidth=2)
-ax.plot(frecuencias,RT_m,"o-",label="Millington",linewidth=2)
+ax.plot(frecuencias,RT_sabine,'o-',label="Sabine")
+ax.plot(frecuencias,RT_eyring,'s-',label="Eyring")
+ax.plot(frecuencias,RT_millington,'^-',label="Millington")
 
 ax.set_xscale("log")
 ax.set_xticks(frecuencias)
 ax.set_xticklabels(frecuencias)
 
 ax.set_xlabel("Frecuencia (Hz)")
-ax.set_ylabel("RT (s)")
+ax.set_ylabel("Tiempo de reverberación (s)")
+
 ax.grid(True,alpha=0.3)
 ax.legend()
 
 st.pyplot(fig)
 
-# ==================================================
+# =========================================================
 # PARÁMETROS DEL CAMPO ACÚSTICO
-# ==================================================
+# =========================================================
 
 st.header("Parámetros del campo acústico")
 
-RT_ref=RT_s[2]
+l = 4*V/S
+tau = l/c
 
-l=4*V/S
-tau=l/c
+st.write("Recorrido libre medio:",round(l,3),"m")
+st.write("Tiempo entre reflexiones:",round(tau,5),"s")
 
-st.write("Recorrido libre medio l =",round(l,3),"m")
-st.write("Tiempo entre reflexiones τ =",round(tau,5),"s")
-
-# ==================================================
+# =========================================================
 # CAMPO DIRECTO
-# ==================================================
+# =========================================================
 
-If=W_fuente/(4*math.pi*r**2)
-LI=10*math.log10(If/I0)
+If = W_fuente/(4*math.pi*r**2)
+LI = 10*np.log10(If/I0)
 
 st.subheader("Campo directo")
 
-st.write("Intensidad If =",If)
-st.write("Nivel de intensidad LI =",round(LI,2),"dB")
+st.write("Intensidad:",If)
+st.write("Nivel intensidad:",round(LI,2),"dB")
 
-# ==================================================
+# =========================================================
 # CAMPO REVERBERADO
-# ==================================================
+# =========================================================
 
-A_mid=A_freq[1000]
-alpha_mid=A_mid/S
+A_mid = A[3]
+alpha_mid = A_mid/S
 
-R=A_mid/(1-alpha_mid)
+R = A_mid/(1-alpha_mid)
 
-Ir=(4*W_fuente)/R
-LIr=10*math.log10(Ir/I0)
+Ir = (4*W_fuente)/R
+LIr = 10*np.log10(Ir/I0)
 
 st.subheader("Campo reverberado")
 
-st.write("Constante de sala R =",round(R,2))
-st.write("Intensidad reverberada Ir =",Ir)
-st.write("Nivel reverberado LIr =",round(LIr,2),"dB")
+st.write("Constante de sala:",round(R,2))
+st.write("Intensidad reverberada:",Ir)
+st.write("Nivel reverberado:",round(LIr,2),"dB")
 
-# ==================================================
+# =========================================================
 # NIVEL TOTAL
-# ==================================================
+# =========================================================
 
-Lp=Lw+10*math.log10(Q/(4*math.pi*r**2)+4/R)
+Lp = Lw + 10*np.log10(Q/(4*np.pi*r**2) + 4/R)
 
 st.subheader("Nivel de presión sonora")
 
-st.write("Nivel de presión sonora Lp =",round(Lp,2),"dB")
+st.write("Lp =",round(Lp,2),"dB")
 
-# ==================================================
+# =========================================================
 # DISTANCIA CRÍTICA
-# ==================================================
+# =========================================================
 
-Dc=0.057*math.sqrt(Q*R)
+Dc = 0.057*np.sqrt(Q*R)
 
 st.subheader("Distancia crítica")
 
