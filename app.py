@@ -79,7 +79,7 @@ data={
 "4000":[0.02,0.02,0.04,0.02,0.04,0.06,0.076,0.05]
 }
 
-st.writetaFrame(data)
+df=pd.DataFrame(data)
 
 df_edit=st.data_editor(df)
 
