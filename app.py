@@ -91,17 +91,21 @@ A_freq={}
 
 for f in frecuencias:
 
-    A=np.sum(df_edit["Area (m2)"]*df_edit[str(f)])
+    A=0
 
-    if A<=0:
-        A=1e-6
+    for i,row in df_edit.iterrows():
+
+        area=float(row["Area (m2)"])
+        alpha=float(row[str(f)])
+
+        A+=area*alpha
 
     A_freq[f]=A
 
 st.subheader("Área de absorción equivalente")
 
 for f in frecuencias:
-    st.write(f"A({f} Hz) =",round(A_freq[f],3),"m²")
+    st.write(f"A({f} Hz) =",round(A_freq[f],3),"sabines")
 
 # =========================
 # RT por banda
@@ -132,8 +136,8 @@ for f in frecuencias:
 
     for i,row in df_edit.iterrows():
 
-        area=row["Area (m2)"]
-        a=row[str(f)]
+        area=float(row["Area (m2)"])
+        a=float(row[str(f)])
 
         a=min(a,0.999)
 
@@ -176,7 +180,7 @@ ax.plot(frecuencias,RT_e,"o-",label="Eyring",linewidth=2)
 ax.plot(frecuencias,RT_m,"o-",label="Millington",linewidth=2)
 
 ax.set_xlabel("Frecuencia (Hz)")
-ax.set_ylabel("Tiempo de reverberación (s)")
+ax.set_ylabel("RT (s)")
 ax.grid(True,alpha=0.3)
 ax.legend()
 
