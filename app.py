@@ -25,6 +25,20 @@ st.sidebar.write("Volumen:",round(V,2),"m³")
 st.sidebar.write("Superficie total:",round(S,2),"m²")
 
 # =========================
+# Datos de fuente
+# =========================
+
+st.sidebar.header("Fuente sonora")
+
+W_fuente = st.sidebar.number_input("Potencia W (W)",0.001)
+r = st.sidebar.number_input("Distancia r (m)",5.0)
+Q = st.sidebar.number_input("Directividad Q",2.0)
+Lw = st.sidebar.number_input("Nivel potencia Lw (dB)",90.0)
+
+c = 343
+I0 = 1e-12
+
+# =========================
 # Materiales
 # =========================
 
@@ -65,7 +79,7 @@ data={
 "4000":[0.02,0.02,0.04,0.02,0.04,0.06,0.076,0.05]
 }
 
-df=pd.DataFrame(data)
+st.writetaFrame(data)
 
 df_edit=st.data_editor(df)
 
@@ -106,6 +120,7 @@ for f in frecuencias:
     A=A_freq[f]
 
     alpha=A/S
+
     alpha=min(alpha,0.999)
 
     # Sabine
@@ -128,7 +143,11 @@ for f in frecuencias:
 
         suma+=area*math.log(1-a)
 
-    RTm=-0.161*V/suma
+    if suma==0:
+        RTm=RTs
+    else:
+        RTm=-0.161*V/suma
+
     RT_m.append(RTm)
 
 # =========================
@@ -152,26 +171,26 @@ st.dataframe(tabla)
 
 st.header("Gráfica RT vs Frecuencia")
 
+plt.style.use("dark_background")
+
 fig,ax=plt.subplots(figsize=(8,4))
 
-ax.plot(frecuencias,RT_s,"o-",label="Sabine")
-ax.plot(frecuencias,RT_e,"o-",label="Eyring")
-ax.plot(frecuencias,RT_m,"o-",label="Millington")
+ax.plot(frecuencias,RT_s,"o-",label="Sabine",linewidth=2)
+ax.plot(frecuencias,RT_e,"o-",label="Eyring",linewidth=2)
+ax.plot(frecuencias,RT_m,"o-",label="Millington",linewidth=2)
 
 ax.set_xlabel("Frecuencia (Hz)")
 ax.set_ylabel("RT (s)")
-ax.grid(True)
+ax.grid(True,alpha=0.3)
 ax.legend()
 
 st.pyplot(fig)
 
 # =========================
-# Parámetros estadísticos
+# Parámetros del campo acústico
 # =========================
 
 st.header("Parámetros del campo acústico")
-
-c=343
 
 RT_ref=RT_s[2]
 
@@ -180,5 +199,67 @@ n=(c*RT_ref)/l
 tau=l/c
 
 st.write("Recorrido libre medio l =",round(l,3),"m")
-st.write("Número promedio de reflexiones n =",round(n,2))
+st.write("Número de reflexiones n =",round(n,2))
 st.write("Tiempo entre reflexiones τ =",round(tau,5),"s")
+
+# =========================
+# Campo directo
+# =========================
+
+If=W_fuente/(4*math.pi*r**2)
+LI=10*math.log10(If/I0)
+
+st.subheader("Campo directo")
+
+st.write("Intensidad de la fuente If =",If)
+st.write("Nivel de intensidad LI =",round(LI,2),"dB")
+
+# =========================
+# Campo reverberado
+# =========================
+
+A_mid=A_freq[1000]
+alpha_mid=A_mid/S
+
+R=A_mid/(1-alpha_mid)
+
+Ir=(4*W_fuente)/R
+LIr=10*math.log10(Ir/I0)
+
+st.subheader("Campo reverberado")
+
+st.write("Constante de sala R =",round(R,2))
+st.write("Intensidad reverberada Ir =",Ir)
+st.write("Nivel reverberado LIr =",round(LIr,2),"dB")
+
+# =========================
+# Nivel total
+# =========================
+
+Lp=Lw+10*math.log10(Q/(4*math.pi*r**2)+4/R)
+
+st.subheader("Nivel de presión sonora")
+
+st.write("Nivel de presión sonora Lp =",round(Lp,2),"dB")
+
+# =========================
+# Distancia crítica
+# =========================
+
+Dc=0.057*math.sqrt(Q*R)
+
+st.subheader("Distancia crítica")
+
+st.write("Dc =",round(Dc,2),"m")
+
+# =========================
+# Absorción del aire
+# =========================
+
+st.subheader("Absorción del aire")
+
+m = st.sidebar.number_input("Coeficiente absorción aire m (dB/m)",0.003)
+
+Lp_r = Lp - 20*math.log10(r) - m*r
+
+st.write("Nivel con absorción del aire Lp(r) =",round(Lp_r,2),"dB")
