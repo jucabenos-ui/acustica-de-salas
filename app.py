@@ -258,4 +258,4 @@ elif ALCons < 15:
 else:
     nivel = "Mala"
 
-st.write("Nivel de inteligibilidad:", nivel)l)
+st.write("Nivel de inteligibilidad:", nivel)l
