@@ -39,7 +39,7 @@ c = 343
 I0 = 1e-12
 
 # =========================
-# Materiales (CORREGIDOS)
+# Materiales
 # =========================
 
 st.header("Materiales del recinto")
@@ -96,8 +96,7 @@ RT_m = []
 for f in frecuencias:
 
     A = A_freq[f]
-    alpha = A / S
-    alpha = min(alpha, 0.999)
+    alpha = min(A / S, 0.999)
 
     # Sabine
     RTs = 0.161 * V / A
@@ -138,8 +137,6 @@ st.dataframe(tabla)
 # =========================
 
 st.header("Gráfica RT vs Frecuencia")
-
-plt.style.use("dark_background")
 
 fig, ax = plt.subplots(figsize=(8,4))
 
@@ -192,8 +189,7 @@ st.write("Nivel LI =", round(LI, 2), "dB")
 # =========================
 
 A_mid = A_freq[1000]
-alpha_mid = A_mid / S
-alpha_mid = min(alpha_mid, 0.999)
+alpha_mid = min(A_mid / S, 0.999)
 
 R = A_mid / (1 - alpha_mid)
 
@@ -234,30 +230,22 @@ m = st.sidebar.number_input("Coeficiente absorción aire (dB/m)", value=0.003)
 Lp_r = Lp - 20 * math.log10(r) - m * r
 st.write("Nivel con absorción del aire Lp(r) =", round(Lp_r, 2), "dB")
 
-st.header("Inteligibilidad del habla")
+# =========================
+# INTELIGIBILIDAD GLOBAL (%ALCons)
+# =========================
 
-# Usamos RT en 500 Hz (posición 2 del arreglo)
-T60 = RT_s[2]
+st.header("Inteligibilidad del habla (ALCons global)")
 
-# Fórmula %ALCons
-st.header("Inteligibilidad del habla (2 kHz)")
-
-# RT en 2000 Hz
-T60 = RT_s[4]
-
-# Fórmula
-st.header("Inteligibilidad del habla (modelo general)")
-
-# RT promedio (500–1000 Hz)
+# Promedio 500–1000 Hz
 T60 = (RT_s[2] + RT_s[3]) / 2
 
-# Distancia crítica ya la tienes (Dc)
-
-# Fórmula general
-ALCons = (200 * (T60**2) / V) + (50 / (Dc**2))
+# Modelo global
+ALCons = 200 * (T60**2) / V * (1 + (r**2)/(Dc**2))
 
 st.write("RT promedio (500–1000 Hz) =", round(T60, 3), "s")
-st.write("Distancia crítica Dc =", round(Dc, 3), "m")
+st.write("Distancia oyente r =", round(r, 2), "m")
+st.write("Distancia crítica Dc =", round(Dc, 2), "m")
+
 st.write("%ALCons =", round(ALCons, 2), "%")
 
 # Interpretación
@@ -270,4 +258,4 @@ elif ALCons < 15:
 else:
     nivel = "Mala"
 
-st.write("Nivel de inteligibilidad:", nivel)
+st.write("Nivel de inteligibilidad:", nivel)l)
