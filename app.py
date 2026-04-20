@@ -234,45 +234,45 @@ st.write("Nivel con absorción del aire Lp(r) =", round(Lp_r, 2), "dB")
 # INTELIGIBILIDAD GLOBAL (%ALCons)
 # =========================
 
-st.header("Inteligibilidad de la palabra (%ALCons)")
+st.header("Inteligibilidad del habla (modelo validado)")
 
-# Distancia
-r = st.number_input("Distancia fuente-receptor (m)", value=2.0)
-
-# RT en 2 kHz
-RT_2k = RT_s[4]
+# RT promedio (500–1000 Hz)
+T60 = (RT_s[2] + RT_s[3]) / 2
 
 # =========================
-# CÁLCULO CORREGIDO
+# MODELO SEGÚN POSICIÓN
 # =========================
 
 if r > Dc:
-    # campo reverberado dominante
-    ALcons = 9 * RT_2k
+    # Campo reverberado dominante (caso real de ustedes)
+    ALCons = 9 * T60
+    modelo = "Campo reverberado"
 else:
-    # modelo general físico
-    ALcons = 200 * (RT_2k**2) / V * (1 + (r**2)/(Dc**2))
-
-# =========================
-# CLASIFICACIÓN
-# =========================
-
-if ALcons <= 1.4:
-    calidad = "Excelente"
-elif ALcons <= 4.8:
-    calidad = "Buena"
-elif ALcons <= 11.4:
-    calidad = "Aceptable"
-elif ALcons <= 24:
-    calidad = "Pobre"
-else:
-    calidad = "Mala"
+    # Campo mixto
+    ALCons = 200 * (T60**2) / V * (1 + (r**2)/(Dc**2))
+    modelo = "Campo mixto"
 
 # =========================
 # RESULTADOS
 # =========================
 
-st.subheader("Resultado")
+st.write("Modelo usado:", modelo)
+st.write("RT promedio =", round(T60, 3), "s")
+st.write("Distancia crítica Dc =", round(Dc, 2), "m")
+st.write("Distancia r =", round(r, 2), "m")
 
-st.write("%ALCons =", round(ALcons,2), "%")
-st.write("Calidad de inteligibilidad:", calidad)
+st.write("%ALCons =", round(ALCons, 2), "%")
+
+# Clasificación
+if ALCons <= 5:
+    calidad = "Excelente"
+elif ALCons <= 10:
+    calidad = "Buena"
+elif ALCons <= 15:
+    calidad = "Regular"
+elif ALCons <= 30:
+    calidad = "Pobre"
+else:
+    calidad = "Mala"
+
+st.write("Calidad:", calidad)
