@@ -233,3 +233,26 @@ m = st.sidebar.number_input("Coeficiente absorción aire (dB/m)", value=0.003)
 
 Lp_r = Lp - 20 * math.log10(r) - m * r
 st.write("Nivel con absorción del aire Lp(r) =", round(Lp_r, 2), "dB")
+
+st.header("Inteligibilidad del habla")
+
+# Usamos RT en 500 Hz (posición 2 del arreglo)
+T60 = RT_s[2]
+
+# Fórmula %ALCons
+ALCons = 200 * (T60**2) / V
+
+st.write("RT usado (500 Hz) =", round(T60, 3), "s")
+st.write("%ALCons =", round(ALCons, 2), "%")
+
+# Interpretación
+if ALCons < 5:
+    nivel = "Excelente"
+elif ALCons < 10:
+    nivel = "Buena"
+elif ALCons < 15:
+    nivel = "Regular"
+else:
+    nivel = "Mala"
+
+st.write("Nivel de inteligibilidad:", nivel)
