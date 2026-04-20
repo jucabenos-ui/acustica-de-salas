@@ -246,9 +246,18 @@ st.header("Inteligibilidad del habla (2 kHz)")
 T60 = RT_s[4]
 
 # Fórmula
-ALCons = 200 * (T60**2) / V
+st.header("Inteligibilidad del habla (modelo general)")
 
-st.write("RT usado (2000 Hz) =", round(T60, 3), "s")
+# RT promedio (500–1000 Hz)
+T60 = (RT_s[2] + RT_s[3]) / 2
+
+# Distancia crítica ya la tienes (Dc)
+
+# Fórmula general
+ALCons = (200 * (T60**2) / V) + (50 / (Dc**2))
+
+st.write("RT promedio (500–1000 Hz) =", round(T60, 3), "s")
+st.write("Distancia crítica Dc =", round(Dc, 3), "m")
 st.write("%ALCons =", round(ALCons, 2), "%")
 
 # Interpretación
