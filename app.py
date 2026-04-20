@@ -240,9 +240,15 @@ st.header("Inteligibilidad del habla")
 T60 = RT_s[2]
 
 # Fórmula %ALCons
+st.header("Inteligibilidad del habla (2 kHz)")
+
+# RT en 2000 Hz
+T60 = RT_s[4]
+
+# Fórmula
 ALCons = 200 * (T60**2) / V
 
-st.write("RT usado (500 Hz) =", round(T60, 3), "s")
+st.write("RT usado (2000 Hz) =", round(T60, 3), "s")
 st.write("%ALCons =", round(ALCons, 2), "%")
 
 # Interpretación
