@@ -234,28 +234,45 @@ st.write("Nivel con absorción del aire Lp(r) =", round(Lp_r, 2), "dB")
 # INTELIGIBILIDAD GLOBAL (%ALCons)
 # =========================
 
-st.header("Inteligibilidad del habla (ALCons global)")
+st.header("Inteligibilidad de la palabra (%ALCons)")
 
-# Promedio 500–1000 Hz
-T60 = (RT_s[2] + RT_s[3]) / 2
+# Distancia
+r = st.number_input("Distancia fuente-receptor (m)", value=2.0)
 
-# Modelo global
-ALCons = 200 * (T60**2) / V * (1 + (r**2)/(Dc**2))
+# RT en 2 kHz
+RT_2k = RT_s[4]
 
-st.write("RT promedio (500–1000 Hz) =", round(T60, 3), "s")
-st.write("Distancia oyente r =", round(r, 2), "m")
-st.write("Distancia crítica Dc =", round(Dc, 2), "m")
+# =========================
+# CÁLCULO CORREGIDO
+# =========================
 
-st.write("%ALCons =", round(ALCons, 2), "%")
-
-# Interpretación
-if ALCons < 5:
-    nivel = "Excelente"
-elif ALCons < 10:
-    nivel = "Buena"
-elif ALCons < 15:
-    nivel = "Regular"
+if r > Dc:
+    # campo reverberado dominante
+    ALcons = 9 * RT_2k
 else:
-    nivel = "Mala"
+    # modelo general físico
+    ALcons = 200 * (RT_2k**2) / V * (1 + (r**2)/(Dc**2))
 
-st.write("Nivel de inteligibilidad:", nivel)
+# =========================
+# CLASIFICACIÓN
+# =========================
+
+if ALcons <= 1.4:
+    calidad = "Excelente"
+elif ALcons <= 4.8:
+    calidad = "Buena"
+elif ALcons <= 11.4:
+    calidad = "Aceptable"
+elif ALcons <= 24:
+    calidad = "Pobre"
+else:
+    calidad = "Mala"
+
+# =========================
+# RESULTADOS
+# =========================
+
+st.subheader("Resultado")
+
+st.write("%ALCons =", round(ALcons,2), "%")
+st.write("Calidad de inteligibilidad:", calidad)
